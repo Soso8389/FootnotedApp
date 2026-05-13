@@ -146,18 +146,25 @@ def fmt_chg(v):
 # ── Data functions ─────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_edgar_rss(form_type: str, count: int = 40) -> list:
-    """Fetch recent filings from SEC EDGAR Atom feed."""
-    url = (
-        "https://www.sec.gov/cgi-bin/browse-edgar"
-        f"?action=getcurrent&type={requests.utils.quote(form_type)}"
-        f"&dateb=&owner=include&count={count}&search_text=&output=atom"
-    )
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        r.raise_for_status()
-        root = ET.fromstring(r.content)
-        rows = []
-        for entry in root.findall("atom:entry", NS):
+    """Fetch recent filings from SEC EDGAR Atom feed, paginating if needed."""
+    rows = []
+    fetched = 0
+    batch = min(40, count)
+    start = 0
+    while fetched < count:
+        url = (
+            "https://www.sec.gov/cgi-bin/browse-edgar"
+            f"?action=getcurrent&type={requests.utils.quote(form_type)}"
+            f"&dateb=&owner=include&count={batch}&search_text=&output=atom&start={start}"
+        )
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            r.raise_for_status()
+            root = ET.fromstring(r.content)
+            entries = root.findall("atom:entry", NS)
+            if not entries:
+                break
+            for entry in entries:
             title_el   = entry.find("atom:title",   NS)
             updated_el = entry.find("atom:updated", NS)
             link_el    = entry.find("atom:link",    NS)
