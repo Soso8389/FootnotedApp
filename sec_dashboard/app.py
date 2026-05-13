@@ -252,7 +252,8 @@ with st.sidebar:
     ])
 
     search_term = st.text_input("Search Company", placeholder="e.g. Tesla")
-    show_n      = st.slider("Max rows", 10, 100, 40, step=5)
+    show_n      = st.slider("Max rows", 10, 500, 40, step=10)
+    after_hours = st.toggle("Always show after-hours filings (4PM+)", value=True)
 
     st.markdown("---")
     mcap_filter = st.select_slider(
@@ -362,7 +363,12 @@ else:
         df[df["mcap"].notna()].sort_values(scol, ascending=sasc),
         df[df["mcap"].isna()],
     ])
-df_sorted = df_sorted.head(show_n).reset_index(drop=True)
+if after_hours:
+    after = df_sorted[df_sorted["accepted"].str[11:13].astype(str) >= "16"]
+    rest  = df_sorted[~df_sorted.index.isin(after.index)].head(show_n)
+    df_sorted = pd.concat([rest, after]).reset_index(drop=True)
+else:
+    df_sorted = df_sorted.head(show_n).reset_index(drop=True)
 
 # ── Metrics ────────────────────────────────────────────────────────────────────
 avg_chg  = df["chg"].mean()
