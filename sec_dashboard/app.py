@@ -244,6 +244,7 @@ with st.sidebar:
         "Stock Price ↓", "Stock Price ↑",
         "% Change ↓", "% Change ↑",
         "Filing Date ↓",
+        "Accepted ↓",
     ])
 
     search_term = st.text_input("Search Company", placeholder="e.g. Tesla")
@@ -321,10 +322,11 @@ sort_map = {
     "% Change ↓":    ("chg",       False),
     "% Change ↑":    ("chg",       True),
     "Filing Date ↓": ("file_date", False),
+    "Accepted ↓":    ("accepted",  False),
 }
 scol, sasc = sort_map.get(sort_by, ("mcap", False))
 
-if scol == "file_date":
+if scol in ("file_date", "accepted"):
     df_sorted = df.sort_values(scol, ascending=sasc)
 else:
     df_sorted = pd.concat([
@@ -368,6 +370,7 @@ for i, row in df_sorted.iterrows():
         "Price":      fmt_price(row.get("price")),
         "Day Change": fmt_chg(row.get("chg")),
         "Market Cap": fmt_mcap(row.get("mcap")),
+        "Accepted":   row.get("accepted", "")[:19].replace("T", "  ") if row.get("accepted") else "—",
         "_link":      row.get("link", ""),
     })
 
