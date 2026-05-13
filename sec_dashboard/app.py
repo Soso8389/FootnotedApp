@@ -168,14 +168,15 @@ def fetch_edgar_rss(form_type: str, count: int = 40) -> list:
 
             # Parse "FORM - ENTITY (CIK XXXXXXXXXX)" or "FORM - ENTITY"
             entity, cik = title, ""
-            m = re.match(r"^[^\-]+-\s*(.+?)\s*\(CIK\s*(\d+)\)\s*$", title, re.I)
-            if m:
-                entity = m.group(1).strip()
-                cik    = m.group(2).zfill(10)
-            else:
-                parts = title.split(" - ", 1)
-                if len(parts) == 2:
-                    entity = parts[1].strip()
+            import re as _re
+            cik_m = _re.search(r'\((\d{7,10})\)', title)
+            if cik_m:
+                cik = cik_m.group(1).zfill(10)
+            parts = title.split(" - ", 1)
+            if len(parts) == 2:
+                entity = parts[1].strip()
+            entity = _re.sub(r'\(\d+\)', '', entity).strip()
+            entity = _re.sub(r'\(Filer\)', '', entity, flags=_re.I).strip()
 
             rows.append({
                 "entity_name": re.sub(r"\(\d+\)\s*\(Filer\)", "", entity).strip(),
