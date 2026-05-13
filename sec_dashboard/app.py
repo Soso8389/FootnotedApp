@@ -387,9 +387,9 @@ def style_rank(val):
 styled = (
     disp_df.drop(columns=["_link"])
     .style
-    .applymap(style_change, subset=["Day Change"])
-    .applymap(style_form,   subset=["Form"])
-    .applymap(style_rank,   subset=["Rank"])
+    .map(style_change, subset=["Day Change"])
+    .map(style_form,   subset=["Form"])
+    .map(style_rank,   subset=["Rank"])
     .set_properties(**{
         "background-color": "#111318",
         "color": "#e8eaf0",
