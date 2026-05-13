@@ -183,7 +183,9 @@ def fetch_edgar_rss(form_type: str, count: int = 40) -> list:
                 "form_type":   form_type,
                 "file_date":   updated[:10],
                 "accepted":    updated,
-                "item_number": entry.find("atom:category", NS).get("term", "—") if entry.find("atom:category", NS) is not None else "—",
+                "item_number": (lambda s: m.group(1) if (m := __import__('re').search(r'Item\s+([\d\.]+)', s or "")) else "—")(
+                    (entry.find("atom:summary", NS) or entry.find("atom:content", NS) or type('', (), {"text": ""})()).text
+                ),
                 "cik":         cik,
                 "link":        link,
             })
