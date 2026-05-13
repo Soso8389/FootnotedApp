@@ -183,8 +183,8 @@ def fetch_edgar_rss(form_type: str, count: int = 40) -> list:
                 "form_type":   form_type,
                 "file_date":   updated[:10],
                 "accepted":    updated,
-                "item_number": (lambda s: m.group(1) if (m := __import__('re').search(r'Item\s+([\d\.]+)', s or "")) else "—")(
-                    (entry.find("atom:summary", NS) or entry.find("atom:content", NS) or type('', (), {"text": ""})()).text
+                "item_number": (lambda s: ", ".join(__import__('re').findall(r'Item\s+([\d\.]+)', s or "")) or "—")(
+                    getattr(entry.find("atom:summary", NS), "text", "") or ""
                 ),
                 "cik":         cik,
                 "link":        link,
@@ -364,7 +364,7 @@ else:
         df[df["mcap"].isna()],
     ])
 if after_hours:
-    after = df_sorted[df_sorted["accepted"].str[11:13].astype(str) >= "16"]
+    after = df_sorted[df_sorted["accepted"].str[11:16] >= "16:00"]
     rest  = df_sorted[~df_sorted.index.isin(after.index)].head(show_n)
     df_sorted = pd.concat([rest, after]).reset_index(drop=True)
 else:
