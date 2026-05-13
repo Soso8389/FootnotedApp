@@ -252,6 +252,13 @@ with st.sidebar:
     show_n      = st.slider("Max rows", 10, 100, 40, step=5)
 
     st.markdown("---")
+    mcap_filter = st.select_slider(
+        "Min Market Cap",
+        options=["Any", "$100M", "$500M", "$1B", "$5B", "$10B", "$50B", "$100B"],
+        value="Any",
+    )
+
+    st.markdown("---")
     refresh = st.button("🔄  Refresh Data")
     st.markdown(
         "<div style='font-size:10px;color:#6b7280;line-height:1.8;margin-top:8px'>"
@@ -311,6 +318,15 @@ pb.empty()
 df = pd.DataFrame(all_filings)
 
 # ── Filter ─────────────────────────────────────────────────────────────────────
+mcap_thresholds = {
+    "Any": 0, "$100M": 1e8, "$500M": 5e8,
+    "$1B": 1e9, "$5B": 5e9, "$10B": 1e10,
+    "$50B": 5e10, "$100B": 1e11,
+}
+min_mcap = mcap_thresholds.get(mcap_filter, 0)
+if min_mcap > 0:
+    df = df[df["mcap"].notna() & (df["mcap"] >= min_mcap)]
+
 if search_term:
     df = df[df["entity_name"].str.contains(search_term, case=False, na=False)]
 
