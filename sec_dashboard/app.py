@@ -183,6 +183,7 @@ def fetch_edgar_rss(form_type: str, count: int = 40) -> list:
                 "form_type":   form_type,
                 "file_date":   updated[:10],
                 "accepted":    updated,
+                "item_number": entry.find("atom:category", NS).get("term", "—") if entry.find("atom:category", NS) is not None else "—",
                 "cik":         cik,
                 "link":        link,
             })
@@ -396,6 +397,7 @@ for i, row in df_sorted.iterrows():
         "Price":      fmt_price(row.get("price")),
         "Day Change": fmt_chg(row.get("chg")),
         "Market Cap": fmt_mcap(row.get("mcap")),
+        "Item No.":   row.get("item_number", "—"),
         "Accepted":   row.get("accepted", "")[:19].replace("T", "  ") if row.get("accepted") else "—",
         "_link":      row.get("link", ""),
     })
