@@ -148,10 +148,9 @@ def fmt_chg(v):
 def fetch_edgar_rss(form_type: str, count: int = 40) -> list:
     """Fetch recent filings from SEC EDGAR Atom feed, paginating if needed."""
     rows = []
-    fetched = 0
-    batch = min(40, count)
     start = 0
-    while fetched < count:
+    batch = 40
+    while len(rows) < count:
         url = (
             "https://www.sec.gov/cgi-bin/browse-edgar"
             f"?action=getcurrent&type={requests.utils.quote(form_type)}"
@@ -165,38 +164,39 @@ def fetch_edgar_rss(form_type: str, count: int = 40) -> list:
             if not entries:
                 break
             for entry in entries:
-            title_el   = entry.find("atom:title",   NS)
-            updated_el = entry.find("atom:updated", NS)
-            link_el    = entry.find("atom:link",    NS)
-
-            title   = (title_el.text   or "").strip()
-            updated = (updated_el.text or "").strip()
-            link    = link_el.get("href", "") if link_el is not None else ""
-
-            # Parse "FORM - ENTITY (CIK XXXXXXXXXX)" or "FORM - ENTITY"
-            entity, cik = title, ""
-            import re as _re
-            cik_m = _re.search(r'\((\d{7,10})\)', title)
-            if cik_m:
-                cik = cik_m.group(1).zfill(10)
-            parts = title.split(" - ", 1)
-            if len(parts) == 2:
-                entity = parts[1].strip()
-            entity = _re.sub(r'\(\d+\)', '', entity).strip()
-            entity = _re.sub(r'\(Filer\)', '', entity, flags=_re.I).strip()
-
-            rows.append({
-                "entity_name": re.sub(r"\(\d+\)\s*\(Filer\)", "", entity).strip(),
-                "form_type":   form_type,
-                "file_date":   updated[:10],
-                "accepted":    updated,
-                "item_number": (lambda s: ", ".join(__import__('re').findall(r'Item\s+([\d\.]+)', s or "")) or "—")(
-                    getattr(entry.find("atom:summary", NS), "text", "") or ""
-                ),
-                "cik":         cik,
-                "link":        link,
-            })
-        return rows
+                title_el   = entry.find("atom:title",   NS)
+                updated_el = entry.find("atom:updated", NS)
+                link_el    = entry.find("atom:link",    NS)
+                title   = (title_el.text   or "").strip()
+                updated = (updated_el.text or "").strip()
+                link    = link_el.get("href", "") if link_el is not None else ""
+                entity, cik = title, ""
+                import re as _re
+                cik_m = _re.search(r'\((\d{7,10})\)', title)
+                if cik_m:
+                    cik = cik_m.group(1).zfill(10)
+                parts = title.split(" - ", 1)
+                if len(parts) == 2:
+                    entity = parts[1].strip()
+                entity = _re.sub(r'\(\d+\)', '', entity).strip()
+                entity = _re.sub(r'\(Filer\)', '', entity, flags=_re.I).strip()
+                item_text = getattr(entry.find("atom:summary", NS), "text", "") or ""
+                item_nums = ", ".join(_re.findall(r'Item\s+([\d\.]+)', item_text)) or "—"
+                rows.append({
+                    "entity_name": entity,
+                    "form_type":   form_type,
+                    "file_date":   updated[:10],
+                    "accepted":    updated,
+                    "item_number": item_nums,
+                    "cik":         cik,
+                    "link":        link,
+                })
+            start += batch
+            if len(entries) < batch:
+                break
+        except Exception:
+            break
+    return rows
     except Exception:
         return []
 
