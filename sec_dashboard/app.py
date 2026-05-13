@@ -178,7 +178,7 @@ def fetch_edgar_rss(form_type: str, count: int = 40) -> list:
                     entity = parts[1].strip()
 
             rows.append({
-                "entity_name": entity,
+                "entity_name": re.sub(r"\(\d+\)\s*\(Filer\)", "", entity).strip(),
                 "form_type":   form_type,
                 "file_date":   updated[:10],
                 "cik":         cik,
