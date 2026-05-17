@@ -40,7 +40,7 @@ hr { border-color:rgba(255,255,255,0.07) !important; }
 
 HEADERS = {"User-Agent": "SEC-Dashboard-App contact@yourdomain.com", "Accept-Encoding": "gzip, deflate"}
 NS = {"atom": "http://www.w3.org/2005/Atom"}
-FORM_TYPES_ALL = ["10-K", "10-Q", "8-K", "4", "S-1", "DEF 14A", "SC 13G", "SC 13D"]
+FORM_TYPES_ALL = ["10-K", "10-Q", "8-K", "8-K/A", "4", "S-1", "DEF 14A", "SC 13G", "SC 13D"]
 
 def fmt_mcap(v):
     if v is None or (isinstance(v, float) and v != v): return "—"
@@ -151,7 +151,7 @@ def get_price_history(ticker: str):
 with st.sidebar:
     st.markdown("### ⚙ Controls")
     st.markdown("---")
-    selected_forms = st.multiselect("Filing Types", FORM_TYPES_ALL, default=["10-K", "10-Q", "8-K"])
+    selected_forms = st.multiselect("Filing Types", FORM_TYPES_ALL, default=["10-K", "10-Q", "8-K", "8-K/A", "DEF 14A"])
     sort_by = st.selectbox("Sort By", [
         "Market Cap ↓", "Market Cap ↑",
         "Stock Price ↓", "Stock Price ↑",
