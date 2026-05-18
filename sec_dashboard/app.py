@@ -28,6 +28,7 @@ section[data-testid="stSidebar"] * { color: #e8eaf0 !important; }
 .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#00e5a0; box-shadow:0 0 6px #00e5a0; animation:blink 2s infinite; margin-right:6px; vertical-align:middle; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
 .section-head { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; color:#e8eaf0; margin:1.5rem 0 0.75rem; }
+.filter-tag { display:inline-block; background:#1a2a1a; border:1px solid #00e5a0; border-radius:3px; color:#00e5a0; font-size:10px; padding:2px 8px; margin:2px; }
 .stButton > button { background:#00e5a0 !important; color:#000 !important; border:none !important; border-radius:4px !important; font-family:'IBM Plex Mono',monospace !important; font-size:12px !important; font-weight:500 !important; width:100%; padding:10px !important; }
 .stButton > button:hover { background:#00c98a !important; }
 [data-testid="metric-container"] { background:#111318 !important; border:1px solid rgba(255,255,255,0.07) !important; border-radius:5px !important; padding:14px 18px !important; }
@@ -41,6 +42,23 @@ hr { border-color:rgba(255,255,255,0.07) !important; }
 HEADERS = {"User-Agent": "SEC-Dashboard-App contact@yourdomain.com", "Accept-Encoding": "gzip, deflate"}
 NS = {"atom": "http://www.w3.org/2005/Atom"}
 FORM_TYPES_ALL = ["10-K", "10-Q", "8-K", "8-K/A", "4", "S-1", "DEF 14A", "SC 13G", "SC 13D"]
+
+MCAP_OPTIONS = [
+    "Any",
+    "$50M", "$100M", "$150M", "$200M", "$250M", "$300M", "$350M", "$400M", "$450M", "$500M",
+    "$600M", "$700M", "$800M", "$900M",
+    "$1B", "$2B", "$3B", "$4B", "$5B",
+    "$10B", "$25B", "$50B", "$100B",
+]
+
+MCAP_THRESHOLDS = {
+    "Any": 0,
+    "$50M": 5e7, "$100M": 1e8, "$150M": 1.5e8, "$200M": 2e8, "$250M": 2.5e8,
+    "$300M": 3e8, "$350M": 3.5e8, "$400M": 4e8, "$450M": 4.5e8, "$500M": 5e8,
+    "$600M": 6e8, "$700M": 7e8, "$800M": 8e8, "$900M": 9e8,
+    "$1B": 1e9, "$2B": 2e9, "$3B": 3e9, "$4B": 4e9, "$5B": 5e9,
+    "$10B": 1e10, "$25B": 2.5e10, "$50B": 5e10, "$100B": 1e11,
+}
 
 def fmt_mcap(v):
     if v is None or (isinstance(v, float) and v != v): return "—"
@@ -147,43 +165,64 @@ def get_price_history(ticker: str):
     except Exception:
         return None
 
-# Sidebar
+# ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚙ Controls")
     st.markdown("---")
-    selected_forms = st.multiselect("Filing Types", FORM_TYPES_ALL, default=["10-K", "10-Q", "8-K", "8-K/A", "DEF 14A"])
+
+    st.markdown("**📋 Filing Types**")
+    selected_forms = st.multiselect("Filing Types", FORM_TYPES_ALL,
+        default=["10-K", "10-Q", "8-K", "8-K/A", "DEF 14A"],
+        label_visibility="collapsed")
+
+    st.markdown("---")
+    st.markdown("**↕ Sort**")
     sort_by = st.selectbox("Sort By", [
         "Market Cap ↓", "Market Cap ↑",
         "Stock Price ↓", "Stock Price ↑",
         "% Change ↓", "% Change ↑",
         "Filing Date ↓", "Accepted ↓",
-    ])
-    search_term = st.text_input("Search Company", placeholder="e.g. Tesla")
-    show_n      = st.slider("Max rows", 10, 500, 40, step=10)
-    after_hours = st.toggle("Always show after-hours filings (4PM+)", value=True)
+    ], label_visibility="collapsed")
+
     st.markdown("---")
-    mcap_filter = st.select_slider(
-        "Min Market Cap",
-        options=[
-            "Any",
-            "$50M", "$100M", "$150M", "$200M", "$250M", "$300M", "$350M", "$400M", "$450M", "$500M",
-            "$600M", "$700M", "$800M", "$900M",
-            "$1B", "$2B", "$3B", "$4B", "$5B",
-            "$10B", "$25B", "$50B", "$100B",
-        ],
-        value="Any",
-    )
+    st.markdown("**🔍 Filters**")
+
+    search_term = st.text_input("Company name contains", placeholder="e.g. Apple")
+
+    ticker_search = st.text_input("Ticker symbol", placeholder="e.g. AAPL")
+
+    mcap_min = st.select_slider("Min market cap", options=MCAP_OPTIONS, value="Any")
+    mcap_max = st.select_slider("Max market cap", options=MCAP_OPTIONS, value="Any")
+
+    price_min = st.number_input("Min stock price ($)", min_value=0.0, value=0.0, step=1.0)
+    price_max = st.number_input("Max stock price ($)", min_value=0.0, value=0.0, step=1.0,
+        help="Set to 0 to disable")
+
+    chg_min = st.number_input("Min day change (%)", value=-100.0, step=0.5)
+    chg_max = st.number_input("Max day change (%)", value=100.0,  step=0.5)
+
+    item_search = st.text_input("Item number contains", placeholder="e.g. 8.01")
+
+    after_hours = st.toggle("Always show after-hours (4PM+)", value=True)
+
+    st.markdown("---")
+    st.markdown("**📊 Display**")
+    show_n = st.slider("Max rows", 10, 500, 40, step=10)
+
     st.markdown("---")
     refresh = st.button("🔄  Refresh Data")
+    if st.button("🗑  Clear All Filters"):
+        st.rerun()
+
     st.markdown("<div style='font-size:10px;color:#6b7280;line-height:1.8;margin-top:8px'>📡 SEC EDGAR + Yahoo Finance<br>⏱ Market data cached 3 min<br>📋 Filings cached 5 min</div>", unsafe_allow_html=True)
 
-# Header
+# ── Header ─────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="sec-header">
   <div class="sec-logo">SEC</div>
   <div>
     <div class="sec-title">SEC Filing Tracker</div>
-    <div class="sec-sub">Live EDGAR filings · Ranked by market cap &amp; price · Yahoo Finance</div>
+    <div class="sec-sub">Live EDGAR filings · Multi-filter · Ranked by market cap &amp; price</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -191,6 +230,7 @@ st.markdown("""
 if refresh:
     st.cache_data.clear()
 
+# ── Fetch ──────────────────────────────────────────────────────────────────────
 forms_to_fetch = selected_forms if selected_forms else ["10-K", "10-Q", "8-K"]
 
 with st.spinner("Fetching SEC EDGAR filings…"):
@@ -203,6 +243,7 @@ if not all_filings:
     st.error("⚠️ Could not reach SEC EDGAR. Run this app locally: streamlit run app.py")
     st.stop()
 
+# ── Enrich ─────────────────────────────────────────────────────────────────────
 pb = st.progress(0, text="Fetching market data…")
 cik_cache: dict = {}
 for i, f in enumerate(all_filings):
@@ -218,23 +259,42 @@ pb.empty()
 
 df = pd.DataFrame(all_filings)
 
-# Market cap filter
-mcap_thresholds = {
-    "Any": 0,
-    "$50M": 5e7, "$100M": 1e8, "$150M": 1.5e8, "$200M": 2e8, "$250M": 2.5e8,
-    "$300M": 3e8, "$350M": 3.5e8, "$400M": 4e8, "$450M": 4.5e8, "$500M": 5e8,
-    "$600M": 6e8, "$700M": 7e8, "$800M": 8e8, "$900M": 9e8,
-    "$1B": 1e9, "$2B": 2e9, "$3B": 3e9, "$4B": 4e9, "$5B": 5e9,
-    "$10B": 1e10, "$25B": 2.5e10, "$50B": 5e10, "$100B": 1e11,
-}
-min_mcap = mcap_thresholds.get(mcap_filter, 0)
-if min_mcap > 0:
-    df = df[df["mcap"].notna() & (df["mcap"] >= min_mcap)]
+# ── Multi-filter ───────────────────────────────────────────────────────────────
+active_filters = []
 
 if search_term:
     df = df[df["entity_name"].str.contains(search_term, case=False, na=False)]
+    active_filters.append(f"Company: {search_term}")
 
-# Sort
+if ticker_search:
+    df = df[df["ticker"].str.contains(ticker_search.upper(), case=False, na=False)]
+    active_filters.append(f"Ticker: {ticker_search.upper()}")
+
+if item_search:
+    df = df[df["item_number"].str.contains(item_search, case=False, na=False)]
+    active_filters.append(f"Item: {item_search}")
+
+min_mcap_val = MCAP_THRESHOLDS.get(mcap_min, 0)
+max_mcap_val = MCAP_THRESHOLDS.get(mcap_max, 0)
+if min_mcap_val > 0:
+    df = df[df["mcap"].notna() & (df["mcap"] >= min_mcap_val)]
+    active_filters.append(f"MCap ≥ {mcap_min}")
+if max_mcap_val > 0:
+    df = df[df["mcap"].notna() & (df["mcap"] <= max_mcap_val)]
+    active_filters.append(f"MCap ≤ {mcap_max}")
+
+if price_min > 0:
+    df = df[df["price"].notna() & (df["price"] >= price_min)]
+    active_filters.append(f"Price ≥ ${price_min:.2f}")
+if price_max > 0:
+    df = df[df["price"].notna() & (df["price"] <= price_max)]
+    active_filters.append(f"Price ≤ ${price_max:.2f}")
+
+if chg_min != -100.0 or chg_max != 100.0:
+    df = df[df["chg"].notna() & (df["chg"] >= chg_min) & (df["chg"] <= chg_max)]
+    active_filters.append(f"Change: {chg_min:+.1f}% to {chg_max:+.1f}%")
+
+# ── Sort ───────────────────────────────────────────────────────────────────────
 sort_map = {
     "Market Cap ↓":  ("mcap",      False),
     "Market Cap ↑":  ("mcap",      True),
@@ -255,7 +315,6 @@ else:
         df[df["mcap"].isna()],
     ])
 
-# After-hours logic
 if after_hours:
     after = df_sorted[df_sorted["accepted"].str[11:16] >= "16:00"]
     rest  = df_sorted[~df_sorted.index.isin(after.index)].head(show_n)
@@ -263,22 +322,29 @@ if after_hours:
 else:
     df_sorted = df_sorted.head(show_n).reset_index(drop=True)
 
-# Metrics
+# ── Metrics ────────────────────────────────────────────────────────────────────
 avg_chg  = df["chg"].mean()
 top_mcap = df["mcap"].max()
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Filings Fetched",  f"{len(df):,}")
+c1.metric("Filings Shown",    f"{len(df):,}")
 c2.metric("With Market Data", f"{int(df['mcap'].notna().sum()):,}")
 c3.metric("Avg Day Change",   f"{avg_chg:+.2f}%" if avg_chg == avg_chg else "—")
 c4.metric("Largest Cap",      fmt_mcap(top_mcap))
 
+# Active filters display
+if active_filters:
+    tags = " ".join([f"<span class='filter-tag'>✕ {f}</span>" for f in active_filters])
+    st.markdown(f"<div style='margin-bottom:8px'>Active filters: {tags}</div>", unsafe_allow_html=True)
+
 st.markdown(
     f"<div class='status-bar'><span class='live-dot'></span>"
-    f"Live · {len(all_filings)} filings loaded · Updated {datetime.now().strftime('%H:%M:%S')} · Forms: {', '.join(forms_to_fetch)}</div>",
+    f"Live · {len(all_filings)} fetched · {len(df)} after filters · "
+    f"Updated {datetime.now().strftime('%H:%M:%S')} · Forms: {', '.join(forms_to_fetch)}</div>",
     unsafe_allow_html=True,
 )
 
-st.markdown("<div class='section-head'>📋 Filings ranked by market data</div>", unsafe_allow_html=True)
+# ── Table ──────────────────────────────────────────────────────────────────────
+st.markdown("<div class='section-head'>📋 Filings</div>", unsafe_allow_html=True)
 
 rows = []
 for i, row in df_sorted.iterrows():
@@ -306,7 +372,7 @@ def style_change(val):
     return "color: #6b7280"
 
 def style_form(val):
-    c = {"10-K":"#00e5a0","10-Q":"#38bdf8","8-K":"#fbbf24","4":"#c084fc","S-1":"#fb923c"}
+    c = {"10-K":"#00e5a0","10-Q":"#38bdf8","8-K":"#fbbf24","8-K/A":"#fb923c","4":"#c084fc","S-1":"#f472b6","DEF 14A":"#a3e635"}
     return f"color: {c.get(val,'#9ca3af')}; font-weight: 500"
 
 def style_rank(val):
@@ -338,6 +404,7 @@ styled = (
 
 st.dataframe(styled, use_container_width=True, height=560)
 
+# ── Detail panel ───────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown("<div class='section-head'>🔍 Company Detail</div>", unsafe_allow_html=True)
 
