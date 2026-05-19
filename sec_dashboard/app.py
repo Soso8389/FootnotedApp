@@ -177,12 +177,12 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("**↕ Sort**")
-    sort_by = st.selectbox("Sort By", [
+    sort_by = st.multiselect("Sort By (applied in order)", [
         "Market Cap ↓", "Market Cap ↑",
         "Stock Price ↓", "Stock Price ↑",
         "% Change ↓", "% Change ↑",
         "Filing Date ↓", "Accepted ↓",
-    ], label_visibility="collapsed")
+    ], default=["Market Cap ↓"])
 
     st.markdown("---")
     st.markdown("**🔍 Filters**")
