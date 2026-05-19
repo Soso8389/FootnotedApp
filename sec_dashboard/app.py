@@ -305,15 +305,10 @@ sort_map = {
     "Filing Date ↓": ("file_date", False),
     "Accepted ↓":    ("accepted",  False),
 }
-scol, sasc = sort_map.get(sort_by, ("mcap", False))
-
-if scol in ("file_date", "accepted"):
-    df_sorted = df.sort_values(scol, ascending=sasc)
-else:
-    df_sorted = pd.concat([
-        df[df["mcap"].notna()].sort_values(scol, ascending=sasc),
-        df[df["mcap"].isna()],
-    ])
+sorts = [sort_map[s] for s in sort_by if s in sort_map] or [("mcap", False)]
+cols  = [s[0] for s in sorts]
+ascs  = [s[1] for s in sorts]
+df_sorted = df.sort_values(by=cols, ascending=ascs, na_position="last")
 
 if after_hours:
     after = df_sorted[df_sorted["accepted"].str[11:16] >= "16:00"]
